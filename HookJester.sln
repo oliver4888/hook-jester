@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.421
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HookJester", "HookJester\HookJester.csproj", "{CAFD3F69-95E3-4A62-ADBF-9347024D7E0E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CAFD3F69-95E3-4A62-ADBF-9347024D7E0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAFD3F69-95E3-4A62-ADBF-9347024D7E0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAFD3F69-95E3-4A62-ADBF-9347024D7E0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAFD3F69-95E3-4A62-ADBF-9347024D7E0E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F37BECB0-2B04-400C-A427-AC1ADB120426}
+	EndGlobalSection
+EndGlobal
