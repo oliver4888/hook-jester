@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -8,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 using HookJester.Models;
+using HookJester.Services.Crypto;
 
 namespace HookJester.Controllers
 {
@@ -16,17 +16,17 @@ namespace HookJester.Controllers
     public class HookV1Controller : ControllerBase
     {
         private ILogger<HookV1Controller> _logger;
+        private ICryptoService _cryptoService;
 
-        public HookV1Controller(ILogger<HookV1Controller> logger)
+        public HookV1Controller(ILogger<HookV1Controller> logger, ICryptoService cryptoService)
         {
             _logger = logger;
+            _cryptoService = cryptoService;
         }
 
         [HttpPost("[action]/{name}")]
         public IActionResult Simple(string name)
         {
-            _logger.LogDebug($"Reflected Simple from {Request.Host}");
-
             V1JsonFile output = new V1JsonFile
             {
                 Headers = Request.Headers,
@@ -51,19 +51,9 @@ namespace HookJester.Controllers
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            System.IO.File.WriteAllText($"{Environment.CurrentDirectory}/Output/{name}/v1-{DateTime.Now.ToFileTimeUtc()}-{RandomString(5)}.json", outputJson);
+            System.IO.File.WriteAllText($"{Environment.CurrentDirectory}/Output/{name}/v1-{DateTime.Now.ToFileTimeUtc()}-{_cryptoService.GetRandomString(5)}.json", outputJson);
 
             return NoContent();
-        }
-
-        private static Random random = new Random();
-
-        [NonAction]
-        public static string RandomString(int length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
-            return new string(Enumerable.Repeat(chars, length)
-              .Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
 }
