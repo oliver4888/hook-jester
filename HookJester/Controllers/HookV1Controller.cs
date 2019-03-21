@@ -3,6 +3,7 @@ using System.IO;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 using Newtonsoft.Json;
 
@@ -25,13 +26,28 @@ namespace HookJester.Controllers
         }
 
         [HttpPost("[action]/{name}")]
-        public IActionResult Simple(string name)
+        public IActionResult Default(string name)
         {
             V1JsonFile output = new V1JsonFile
             {
                 Headers = Request.Headers,
                 Body = new StreamReader(Request.Body).ReadToEnd()
             };
+
+            if (Request.Headers.ContainsKey("X-Hub-Signature") && Request.Headers.ContainsKey("Content-Length"))
+            {
+                Request.Headers.TryGetValue("X-Hub-Signature", out StringValues hubSignature);
+                Request.Headers.TryGetValue("Content-Length", out StringValues contentLength);
+
+                output.PayloadIsVerified = _cryptoService.PayloadIsVerified(// @Todo: Grab the key from a config file or DB?
+                    long.Parse(contentLength[0]), hubSignature[0], output.Body, ""/* Key */);
+            }
+
+            if (output.PayloadIsVerified == false)
+            {
+                _logger.LogWarning($"Request from {Request.HttpContext.Connection.RemoteIpAddress} failed Hub Signature Verification");
+                return NoContent();
+            }
 
             if (Request.QueryString.Value.Length != 0)
             {
@@ -53,7 +69,7 @@ namespace HookJester.Controllers
 
             System.IO.File.WriteAllText($"{Environment.CurrentDirectory}/Output/{name}/v1-{DateTime.Now.ToFileTimeUtc()}-{_cryptoService.GetRandomString(5)}.json", outputJson);
 
-            return NoContent();
+            return Accepted();
         }
     }
 }

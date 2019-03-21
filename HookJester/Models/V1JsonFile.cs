@@ -11,5 +11,6 @@ namespace HookJester.Models
         public IDictionary<string, string> QueryPairs = new Dictionary<string, string>();
         public IList<string> QuerySingles = new List<string>();
         public string Body;
+        public bool? PayloadIsVerified;
     }
 }

@@ -9,5 +9,6 @@ namespace HookJester.Services.Crypto
     {
         string GetCryptoRandomString(int length = 64);
         string GetRandomString(int length = 64);
+        bool PayloadIsVerified(long contentLength, string hubSignature, string body, string secret);
     }
 }
