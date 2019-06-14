@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using HookJester.Configs;
 using HookJester.Services.Crypto;
+using HookJester.Services.Files;
 
 namespace HookJester
 {
@@ -23,9 +24,10 @@ namespace HookJester
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-            services.AddSingleton<IAppSettings, AppSettings>();
-
+            services.AddSingleton<IFileHasher, FileHasher>();
             services.AddSingleton<ICryptoService, CryptoService>();
+
+            services.AddSingleton<IAppSettings, AppSettings>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

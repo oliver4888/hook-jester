@@ -2,31 +2,63 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+
+using HookJester.Services.Files;
+using Microsoft.Extensions.Primitives;
 
 namespace HookJester.Configs
 {
     public class AppSettings : IAppSettings
     {
-        public AppSettings()
+        private ILogger<AppSettings> _logger;
+        private IFileHasher _fileHasher;
+
+        private byte[] _fileHash;
+
+        private IConfiguration _configuration;
+
+        private string _filePath;
+
+        public AppSettings(ILogger<AppSettings> logger, IFileHasher fileHasher)
         {
-            //Configuration. change token, move this to method, reload on change token change
-            Keys = Configuration.GetSection("AppSettings:Keys").GetChildren()
-                .Select(item => new KeyValuePair<string, string>(item.Key, item.Value))
-                .ToDictionary(x => x.Key, x => x.Value);
+            _logger = logger;
+            _fileHasher = fileHasher;
+
+            _filePath = Path.Combine(Environment.CurrentDirectory, "appsettings.json");
+
+            _logger.LogDebug($"Starting {nameof(AppSettings)}, file path: {_filePath}");
+
+            _configuration = new ConfigurationBuilder()
+                .AddJsonFile(_filePath, false, true).Build().GetSection(nameof(AppSettings));
+
+            _fileHash = _fileHasher.ComputeHash(_filePath);
+
+            Rebind();
+
+            ChangeToken.OnChange(() => _configuration.GetReloadToken(), () =>
+            {
+                byte[] newHash = _fileHasher.ComputeHash(_filePath);
+
+                if (newHash.SequenceEqual(_fileHash)) return;
+
+                _logger.LogDebug("Configuration changed. Reloading...");
+
+                _fileHash = newHash;
+
+                Rebind();
+            });
         }
 
-        private static IConfiguration _configuration;
-        private IConfiguration Configuration = _configuration ?? (_configuration = GetConfiguration());
+        private void Rebind()
+        {
+            Keys = new Dictionary<string, string>();
+            _configuration.Bind(this);
+        }
 
-        private static IConfiguration GetConfiguration() =>
-            new ConfigurationBuilder().AddJsonFile(Path.Combine(Environment.CurrentDirectory, "appsettings.json"), false, true).Build();
-
-        private string GetSetting([CallerMemberName]string setting = "") => Configuration.GetSection($"AppSettings:{setting}").Value;
-
-        public string[] Urls => GetSetting().Split(",");
+        public string[] Urls { get; set; }
         public IDictionary<string, string> Keys { get; set; }
     }
 }
