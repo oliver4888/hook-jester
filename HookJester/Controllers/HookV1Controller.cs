@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
+using IOFile = System.IO.File;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -29,12 +31,12 @@ namespace HookJester.Controllers
         }
 
         [HttpPost("[action]/{name}")]
-        public IActionResult Default(string name)
+        public async Task<IActionResult> Default(string name)
         {
             V1JsonFile output = new V1JsonFile
             {
                 Headers = Request.Headers,
-                Body = new StreamReader(Request.Body).ReadToEnd()
+                Body = await new StreamReader(Request.Body).ReadToEndAsync()
             };
 
             if (Request.Headers.ContainsKey("X-Hub-Signature") && Request.Headers.ContainsKey("Content-Length"))
@@ -72,11 +74,14 @@ namespace HookJester.Controllers
 
             string outputJson = JsonConvert.SerializeObject(output);
 
-            string outputDir = $"{Environment.CurrentDirectory}/Output/{name}";
+            string outputDir = Path.Combine(Environment.CurrentDirectory, "Output", name);
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            System.IO.File.WriteAllText($"{Environment.CurrentDirectory}/Output/{name}/v1-{DateTime.Now.ToFileTimeUtc()}-{_cryptoService.GetRandomString(5)}.json", outputJson);
+            await IOFile.WriteAllTextAsync(
+                Path.Combine(
+                    outputDir, $"v1-{DateTime.Now.ToFileTimeUtc()}-{_cryptoService.GetRandomString(5)}.json"
+                    ), outputJson);
 
             return Accepted();
         }
