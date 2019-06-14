@@ -1,13 +1,15 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 using Newtonsoft.Json;
 
 using HookJester.Models;
+using HookJester.Configs;
+using HookJester.Services.Crypto;
 
 namespace HookJester.Controllers
 {
@@ -16,22 +18,45 @@ namespace HookJester.Controllers
     public class HookV1Controller : ControllerBase
     {
         private ILogger<HookV1Controller> _logger;
+        private ICryptoService _cryptoService;
+        private IAppSettings _appSettings;
 
-        public HookV1Controller(ILogger<HookV1Controller> logger)
+        public HookV1Controller(ILogger<HookV1Controller> logger, ICryptoService cryptoService, IAppSettings appSettings)
         {
             _logger = logger;
+            _cryptoService = cryptoService;
+            _appSettings = appSettings;
         }
 
         [HttpPost("[action]/{name}")]
-        public IActionResult Simple(string name)
+        public IActionResult Default(string name)
         {
-            _logger.LogDebug($"Reflected Simple from {Request.Host}");
-
             V1JsonFile output = new V1JsonFile
             {
                 Headers = Request.Headers,
                 Body = new StreamReader(Request.Body).ReadToEnd()
             };
+
+            if (Request.Headers.ContainsKey("X-Hub-Signature") && Request.Headers.ContainsKey("Content-Length"))
+            {
+                if (!_appSettings.Keys.TryGetValue(name, out string key))
+                {
+                    _logger.LogWarning($"Unable to verify payload from {Request.HttpContext.Connection.RemoteIpAddress} for application \"{name}\"");
+                    return NoContent();
+                }
+
+                Request.Headers.TryGetValue("X-Hub-Signature", out StringValues hubSignature);
+                Request.Headers.TryGetValue("Content-Length", out StringValues contentLength);
+
+                output.PayloadIsVerified = _cryptoService.PayloadIsVerified(
+                    long.Parse(contentLength[0]), hubSignature[0], output.Body, key);
+            }
+
+            if (output.PayloadIsVerified == false)
+            {
+                _logger.LogWarning($"Request from {Request.HttpContext.Connection.RemoteIpAddress} failed Hub Signature Verification");
+                return NoContent();
+            }
 
             if (Request.QueryString.Value.Length != 0)
             {
@@ -51,19 +76,9 @@ namespace HookJester.Controllers
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            System.IO.File.WriteAllText($"{Environment.CurrentDirectory}/Output/{name}/v1-{DateTime.Now.ToFileTimeUtc()}-{RandomString(5)}.json", outputJson);
+            System.IO.File.WriteAllText($"{Environment.CurrentDirectory}/Output/{name}/v1-{DateTime.Now.ToFileTimeUtc()}-{_cryptoService.GetRandomString(5)}.json", outputJson);
 
-            return NoContent();
-        }
-
-        private static Random random = new Random();
-
-        [NonAction]
-        public static string RandomString(int length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
-            return new string(Enumerable.Repeat(chars, length)
-              .Select(s => s[random.Next(s.Length)]).ToArray());
+            return Accepted();
         }
     }
 }

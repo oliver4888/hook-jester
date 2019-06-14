@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using Microsoft.AspNetCore.Http;
 
@@ -10,5 +11,6 @@ namespace HookJester.Models
         public IDictionary<string, string> QueryPairs = new Dictionary<string, string>();
         public IList<string> QuerySingles = new List<string>();
         public string Body;
+        public bool? PayloadIsVerified;
     }
 }
