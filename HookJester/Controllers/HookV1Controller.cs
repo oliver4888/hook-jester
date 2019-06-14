@@ -8,6 +8,7 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 
 using HookJester.Models;
+using HookJester.Configs;
 using HookJester.Services.Crypto;
 
 namespace HookJester.Controllers
@@ -18,11 +19,13 @@ namespace HookJester.Controllers
     {
         private ILogger<HookV1Controller> _logger;
         private ICryptoService _cryptoService;
+        private IAppSettings _appSettings;
 
-        public HookV1Controller(ILogger<HookV1Controller> logger, ICryptoService cryptoService)
+        public HookV1Controller(ILogger<HookV1Controller> logger, ICryptoService cryptoService, IAppSettings appSettings)
         {
             _logger = logger;
             _cryptoService = cryptoService;
+            _appSettings = appSettings;
         }
 
         [HttpPost("[action]/{name}")]
@@ -36,11 +39,17 @@ namespace HookJester.Controllers
 
             if (Request.Headers.ContainsKey("X-Hub-Signature") && Request.Headers.ContainsKey("Content-Length"))
             {
+                if (!_appSettings.Keys.TryGetValue(name, out string key))
+                {
+                    _logger.LogWarning($"Unable to verify payload from {Request.HttpContext.Connection.RemoteIpAddress} for application \"{name}\"");
+                    return NoContent();
+                }
+
                 Request.Headers.TryGetValue("X-Hub-Signature", out StringValues hubSignature);
                 Request.Headers.TryGetValue("Content-Length", out StringValues contentLength);
 
-                output.PayloadIsVerified = _cryptoService.PayloadIsVerified(// @Todo: Grab the key from a config file or DB?
-                    long.Parse(contentLength[0]), hubSignature[0], output.Body, ""/* Key */);
+                output.PayloadIsVerified = _cryptoService.PayloadIsVerified(
+                    long.Parse(contentLength[0]), hubSignature[0], output.Body, key);
             }
 
             if (output.PayloadIsVerified == false)

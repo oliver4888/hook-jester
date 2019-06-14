@@ -39,9 +39,9 @@ namespace HookJester.Services.Crypto
 
         private static Regex HubSignatureRegex = new Regex("^([^=]+)=([^=]+)$");
 
-        public bool PayloadIsVerified(long contentLength, string hubSignature, string body, string secret)
+        public bool PayloadIsVerified(long contentLength, string hubSignature, string payload, string secret)
         {
-            if (body.Length != contentLength)
+            if (payload.Length != contentLength)
                 return false;
 
             Match match = HubSignatureRegex.Match(hubSignature);
@@ -52,7 +52,7 @@ namespace HookJester.Services.Crypto
             string algorithm = match.Groups[1].Value;
 
             byte[] key = Encoding.ASCII.GetBytes(secret);
-            byte[] input = Encoding.ASCII.GetBytes(body);
+            byte[] input = Encoding.ASCII.GetBytes(payload);
 
             byte[] hash;
 

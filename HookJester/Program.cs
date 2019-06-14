@@ -6,7 +6,6 @@ using System.Diagnostics;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 using Serilog;
 
@@ -27,20 +26,22 @@ namespace HookJester
                 Directory.SetCurrentDirectory(pathToContentRoot);
             }
 
-            IWebHostBuilder webHostBuilder = CreateWebHostBuilder(args);
-
-            IWebHost webHost = webHostBuilder.Build();
-
-            var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json")
-            .Build();
+            IConfiguration configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json").Build();
 
             Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(webHost.Services.GetRequiredService<IConfiguration>())
+                .ReadFrom.Configuration(configuration)
                 .CreateLogger();
 
             try
             {
+                IWebHostBuilder webHostBuilder = WebHost.CreateDefaultBuilder(args)
+                .UseSerilog()
+                .UseUrls(configuration.GetSection("AppSettings:Urls").Value.Split(","))
+                .UseStartup<Startup>();
+
+                IWebHost webHost = webHostBuilder.Build();
+
                 Log.Information("Starting web host" + (isService ? " as a service" : ""));
                 if (isService)
                     webHost.RunAsCustomService();
@@ -56,11 +57,5 @@ namespace HookJester
                 Log.CloseAndFlush();
             }
         }
-
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .UseSerilog()
-                .UseUrls("http://localhost:9090")
-                .UseStartup<Startup>();
     }
 }

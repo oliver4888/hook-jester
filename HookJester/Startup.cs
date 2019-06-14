@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using HookJester.Configs;
 using HookJester.Services.Crypto;
 
 namespace HookJester
@@ -21,6 +22,8 @@ namespace HookJester
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+
+            services.AddSingleton<IAppSettings, AppSettings>();
 
             services.AddSingleton<ICryptoService, CryptoService>();
         }
